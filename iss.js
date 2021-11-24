@@ -7,7 +7,7 @@ const request = require('request');
  *   - An error, if any (nullable)
  *   - The IP address as a string (null if error). Example: "162.245.144.188"
  */
-const fetchMyIP = function(callback) {
+const fetchMyIP = function (callback) {
   // use request to fetch IP address from JSON API
   request('https://api.ipify.org?format=json', (error, response, body) => {
     // error can be set if invalid domain, user is offline, etc.
@@ -23,11 +23,10 @@ const fetchMyIP = function(callback) {
     }
     const ipAddress = JSON.parse(body)["ip"];
     callback(null, ipAddress);
-    return ipAddress;
   });
 };
 
-const fetchCoordsByIP = function(ip, callback) {
+const fetchCoordsByIP = function (ip, callback) {
   // const data = { latitude: '49.27670', longitude: '-123.13000' }
   request(`https://freegeoip.app/json/${ip}`, (error, response, body) => {
 
@@ -57,7 +56,7 @@ const fetchCoordsByIP = function(ip, callback) {
  *   - The fly over times as an array of objects (null if error). Example:
  *     [ { risetime: 134564234, duration: 600 }, ... ]
  */
-const fetchISSFlyOverTimes = function(coords, callback) {
+const fetchISSFlyOverTimes = function (coords, callback) {
   // ...
   // use request to fetch IP address from JSON API
   request(`https://iss-pass.herokuapp.com/json/?lat=${coords.latitude}&lon=${coords.longitude}`, (error, response, body) => {
@@ -75,15 +74,29 @@ const fetchISSFlyOverTimes = function(coords, callback) {
     const results = JSON.parse(body)['response'];
     callback(null, results);
   });
-
 };
 
-module.exports = { fetchMyIP, fetchCoordsByIP, fetchISSFlyOverTimes };
+const nextISSTimesForMyLocation = function (callback) {
+  // first step is to find my IP address
+  fetchMyIP((error, ip) => {
+    if (error) {
+      callback(error, null);
+      return;
+    }
+    fetchCoordsByIP(ip, (error, coords) => {
+      if (error) {
+        callback(error, null);
+        return;
+      }  
+      fetchISSFlyOverTimes(coords, (error, results) => {
+        if (error) {
+          callback(error, null);
+          return;
+        }
+        callback(null, results);
+      })
+    })
+  });
+}
 
-/*
-request('http://www.google.com', (error, response, body) => {
-  console.log('error:', error); // Print the error if one occurred
-  console.log('statusCode:', response && response.statusCode); // Print the response status code if a response was received
-  console.log('body:', body); // Print the HTML for the Google homepage.
-});
-*/
+module.exports = { nextISSTimesForMyLocation };
